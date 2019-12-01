@@ -27,7 +27,7 @@ def linearticker(ax_list, xmajlocs, xminlocs, ymajlocs, yminlocs,
                  ymajformatters=FormatStrFormatter,
                  majgridkw=dict(ls='-', alpha=0.8),
                  mingridkw=dict(ls=':', alpha=0.5)):
-    warn("Use mplticker instead of linearticker.")
+    warn("Use linticker instead of linearticker.")
     _ax_list = np.atleast_1d(ax_list)
     n_axis = len(_ax_list)
     xmajloc = np.atleast_1d(xmajlocs)
