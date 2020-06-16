@@ -407,7 +407,7 @@ def append_xdate(
     ax2_list = []
     for ax in ax_list:
         ax2 = ax.twiny()
-        ax2.plot(xdata, ydata, '')  # Fake plot
+        ax2.plot(xdata, ydata, ls='', marker='')  # Fake plot
         ax2.xaxis.set_major_locator(locator)
         ax2.xaxis.set_major_formatter(formatter)
         for label in ax2.get_xticklabels():
