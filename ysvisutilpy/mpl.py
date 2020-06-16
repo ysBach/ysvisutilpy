@@ -1,12 +1,15 @@
 from warnings import warn
 
+import matplotlib.dates as mdates
 import numpy as np
+from dateutil.rrule import (DAILY, HOURLY, MINUTELY, MONTHLY, SECONDLY,
+                            YEARLY)
 from matplotlib.ticker import (FormatStrFormatter, LogFormatterSciNotation,
                                LogLocator, MultipleLocator, NullFormatter)
 
-__all__ = ["colorbaring", "mplticker",
+__all__ = ["colorbaring", "mplticker", "ax_tick",
            "linticker", "logticker", "logxticker", "logyticker",
-           "linearticker"]
+           "linearticker", "append_xdate"]
 
 
 def colorbaring(fig, ax, im, fmt="%.0f", orientation='horizontal',
@@ -15,6 +18,37 @@ def colorbaring(fig, ax, im, fmt="%.0f", orientation='horizontal',
                       format=FormatStrFormatter(fmt), **kwargs)
 
     return cb
+
+
+def ax_tick(ax, x_vals=None, x_show=None, y_vals=None, y_show=None):
+    # if (x_vals is None) ^ (x_show is None):
+    #     raise ValueError("All or none of x_vals and x_show should be given.")
+    # if (y_vals is None) ^ (y_show is None):
+    #     raise ValueError("All or none of y_vals and y_show should be given.")
+
+    if x_vals is not None:
+        x_vals = np.array(x_vals)
+        if x_show is None:
+            x_ticks = x_vals.copy()
+            x_show = x_vals.copy()
+        else:
+            x_ticks = np.array([np.where(x_vals == v)[0][0] for v in x_show])
+
+        ax.set_xticks(x_ticks)
+        ax.set_xticklabels(x_show)
+
+    if y_vals is not None:
+        y_vals = np.array(y_vals)
+        if y_show is None:
+            y_ticks = y_vals.copy()
+            y_show = y_vals.copy()
+        else:
+            y_ticks = np.array([np.where(y_vals == v)[0][0] for v in y_show])
+
+        ax.set_yticks(y_ticks)
+        ax.set_yticklabels(y_show)
+
+    return ax
 
 
 def linearticker(ax_list, xmajlocs, xminlocs, ymajlocs, yminlocs,
@@ -29,38 +63,38 @@ def linearticker(ax_list, xmajlocs, xminlocs, ymajlocs, yminlocs,
                  mingridkw=dict(ls=':', alpha=0.5)):
     warn("Use linticker instead of linearticker.")
     _ax_list = np.atleast_1d(ax_list)
-    n_axis = len(_ax_list)
+    n_axes = len(_ax_list)
     xmajloc = np.atleast_1d(xmajlocs)
     xminloc = np.atleast_1d(xminlocs)
     ymajloc = np.atleast_1d(ymajlocs)
     yminloc = np.atleast_1d(yminlocs)
     xmajfmt = np.atleast_1d(xmajfmts)
     ymajfmt = np.atleast_1d(ymajfmts)
-    if xmajloc.shape[0] != n_axis:
-        xmajloc = np.repeat(xmajloc, n_axis)
-    if xminloc.shape[0] != n_axis:
-        xminloc = np.repeat(xminloc, n_axis)
-    if ymajloc.shape[0] != n_axis:
-        ymajloc = np.repeat(ymajloc, n_axis)
-    if yminloc.shape[0] != n_axis:
-        yminloc = np.repeat(yminloc, n_axis)
-    if xmajfmt.shape[0] != n_axis:
-        xmajfmt = np.repeat(xmajfmt, n_axis)
-    if ymajfmt.shape[0] != n_axis:
-        ymajfmt = np.repeat(ymajfmt, n_axis)
+    if xmajloc.shape[0] != n_axes:
+        xmajloc = np.repeat(xmajloc, n_axes)
+    if xminloc.shape[0] != n_axes:
+        xminloc = np.repeat(xminloc, n_axes)
+    if ymajloc.shape[0] != n_axes:
+        ymajloc = np.repeat(ymajloc, n_axes)
+    if yminloc.shape[0] != n_axes:
+        yminloc = np.repeat(yminloc, n_axes)
+    if xmajfmt.shape[0] != n_axes:
+        xmajfmt = np.repeat(xmajfmt, n_axes)
+    if ymajfmt.shape[0] != n_axes:
+        ymajfmt = np.repeat(ymajfmt, n_axes)
 
     if not isinstance(xmajlocators, (tuple, list, np.ndarray)):
-        xmajlocators = [xmajlocators] * n_axis
+        xmajlocators = [xmajlocators] * n_axes
     if not isinstance(xminlocators, (tuple, list, np.ndarray)):
-        xminlocators = [xminlocators] * n_axis
+        xminlocators = [xminlocators] * n_axes
     if not isinstance(ymajlocators, (tuple, list, np.ndarray)):
-        ymajlocators = [ymajlocators] * n_axis
+        ymajlocators = [ymajlocators] * n_axes
     if not isinstance(yminlocators, (tuple, list, np.ndarray)):
-        yminlocators = [yminlocators] * n_axis
+        yminlocators = [yminlocators] * n_axes
     if not isinstance(xmajformatters, (tuple, list, np.ndarray)):
-        xmajformatters = [xmajformatters] * n_axis
+        xmajformatters = [xmajformatters] * n_axes
     if not isinstance(ymajformatters, (tuple, list, np.ndarray)):
-        ymajformatters = [ymajformatters] * n_axis
+        ymajformatters = [ymajformatters] * n_axes
 
     for i, aa in enumerate(_ax_list):
         aa.xaxis.set_major_locator(xmajlocators[i](xmajloc[i]))
@@ -71,6 +105,34 @@ def linearticker(ax_list, xmajlocs, xminlocs, ymajlocs, yminlocs,
         aa.yaxis.set_major_formatter(ymajformatters[i](ymajfmt[i]))
         aa.grid(which='major', **majgridkw)
         aa.grid(which='minor', **mingridkw)
+
+
+def _check(obj, name, n, dates=False):
+    arr = np.atleast_1d(obj)
+    n_arr = arr.shape[0]
+    if n_arr not in [1, n]:
+        raise ValueError(f"{name} must be a single object or a 1-d array"
+                         + f" with the same length as ax_list ({n}).")
+    else:
+        newarr = arr.tolist() * (n//n_arr)
+
+    return newarr
+
+
+def _setter(setter, Setter, kw):
+    # don't do anything if obj (Locator or Formatter) is None:
+    if (Setter is not None) and (kw is not None):
+        # matplotlib is so poor in log plotting....
+        if (Setter == LogLocator) and ("numticks" not in kw):
+            kw["numticks"] = 50
+
+        if isinstance(kw, dict):
+            setter(Setter(**kw))
+        else:  # interpret as ``*args``
+            setter(Setter(*(np.atleast_1d(kw).tolist())))
+        # except:
+        #     raise ValueError("Error occured for Setter={} with input {}"
+        #                      .format(Setter, kw))
 
 
 def mplticker(ax_list,
@@ -151,67 +213,38 @@ def mplticker(ax_list,
         default arguments.
 
     '''
-    def _check(obj, name, n):
-        arr = np.atleast_1d(obj)
-        n_arr = arr.shape[0]
-        if n_arr not in [1, n]:
-            raise ValueError(f"{name} must be a single object or a 1-d array"
-                             + f" with the same length as ax_list ({n}).")
-        else:
-            newarr = arr.tolist() * (n//n_arr)
+    _ax_list = list(np.atleast_1d(ax_list).flatten())
+    n_axes = len(_ax_list)
 
-        return newarr
+    _xmajlocators = _check(xmajlocators, "xmajlocators", n_axes)
+    _xminlocators = _check(xminlocators, "xminlocators", n_axes)
+    _ymajlocators = _check(ymajlocators, "ymajlocators", n_axes)
+    _yminlocators = _check(yminlocators, "yminlocators", n_axes)
 
-    def _setter(setter, Setter, kw):
-        # don't do anything if obj (Locator or Formatter) is None:
-        if (Setter is not None) and (kw is not None):
+    _xmajformatters = _check(xmajformatters, "xmajformatters ", n_axes)
+    _xminformatters = _check(xminformatters, "xminformatters ", n_axes)
+    _ymajformatters = _check(ymajformatters, "ymajformatters", n_axes)
+    _yminformatters = _check(yminformatters, "yminformatters", n_axes)
 
-            # matplotlib is so poor in log plotting....
-            if (Setter == LogLocator) and ("numticks" not in kw):
-                kw["numticks"] = 50
+    _xmajlockws = _check(xmajlockws, "xmajlockws", n_axes)
+    _xminlockws = _check(xminlockws, "xminlockws", n_axes)
+    _ymajlockws = _check(ymajlockws, "ymajlockws", n_axes)
+    _yminlockws = _check(yminlockws, "yminlockws", n_axes)
 
-            if isinstance(kw, dict):
-                setter(Setter(**kw))
-            else:  # interpret as ``*args``
-                setter(Setter(*(np.atleast_1d(kw).tolist())))
-            # except:
-            #     raise ValueError("Error occured for Setter={} with input {}"
-            #                      .format(Setter, kw))
+    _xmajfmtkws = _check(xmajfmtkws, "xmajfmtkws", n_axes)
+    _xminfmtkws = _check(xminfmtkws, "xminfmtkws", n_axes)
+    _ymajfmtkws = _check(ymajfmtkws, "ymajfmtkws", n_axes)
+    _yminfmtkws = _check(yminfmtkws, "yminfmtkws", n_axes)
 
-    _ax_list = np.atleast_1d(ax_list)
-    if _ax_list.ndim > 1:
-        raise ValueError("ax_list must be at most 1-d.")
-    n_axis = _ax_list.shape[0]
+    _xmajgrids = _check(xmajgrids, "xmajgrids", n_axes)
+    _xmingrids = _check(xmingrids, "xmingrids", n_axes)
+    _ymajgrids = _check(ymajgrids, "ymajgrids", n_axes)
+    _ymingrids = _check(ymingrids, "ymingrids", n_axes)
 
-    _xmajlocators = _check(xmajlocators, "xmajlocators", n_axis)
-    _xminlocators = _check(xminlocators, "xminlocators", n_axis)
-    _ymajlocators = _check(ymajlocators, "ymajlocators", n_axis)
-    _yminlocators = _check(yminlocators, "yminlocators", n_axis)
-
-    _xmajformatters = _check(xmajformatters, "xmajformatters ", n_axis)
-    _xminformatters = _check(xminformatters, "xminformatters ", n_axis)
-    _ymajformatters = _check(ymajformatters, "ymajformatters", n_axis)
-    _yminformatters = _check(yminformatters, "yminformatters", n_axis)
-
-    _xmajlockws = _check(xmajlockws, "xmajlockws", n_axis)
-    _xminlockws = _check(xminlockws, "xminlockws", n_axis)
-    _ymajlockws = _check(ymajlockws, "ymajlockws", n_axis)
-    _yminlockws = _check(yminlockws, "yminlockws", n_axis)
-
-    _xmajfmtkws = _check(xmajfmtkws, "xmajfmtkws", n_axis)
-    _xminfmtkws = _check(xminfmtkws, "xminfmtkws", n_axis)
-    _ymajfmtkws = _check(ymajfmtkws, "ymajfmtkws", n_axis)
-    _yminfmtkws = _check(yminfmtkws, "yminfmtkws", n_axis)
-
-    _xmajgrids = _check(xmajgrids, "xmajgrids", n_axis)
-    _xmingrids = _check(xmingrids, "xmingrids", n_axis)
-    _ymajgrids = _check(ymajgrids, "ymajgrids", n_axis)
-    _ymingrids = _check(ymingrids, "ymingrids", n_axis)
-
-    _xmajgridkws = _check(xmajgridkws, "xmajgridkws", n_axis)
-    _xmingridkws = _check(xmingridkws, "xmingridkws", n_axis)
-    _ymajgridkws = _check(ymajgridkws, "ymajgridkws", n_axis)
-    _ymingridkws = _check(ymingridkws, "ymingridkws", n_axis)
+    _xmajgridkws = _check(xmajgridkws, "xmajgridkws", n_axes)
+    _xmingridkws = _check(xmingridkws, "xmingridkws", n_axes)
+    _ymajgridkws = _check(ymajgridkws, "ymajgridkws", n_axes)
+    _ymingridkws = _check(ymingridkws, "ymingridkws", n_axes)
 
     for i, aa in enumerate(_ax_list):
         _xmajlocator = _xmajlocators[i]
@@ -343,3 +376,73 @@ def logyticker(ax_list,
                ymajgridkws=dict(ls='-', alpha=0.5),
                ymingridkws=dict(ls=':', alpha=0.5)):
     mplticker(**locals())
+
+
+def append_xdate(
+    ax_list, xdata, ydata, concise=False,
+    tick_year=None, tick_month=None, tick_day=None,
+    tick_hour=None, tick_minute=None, tick_second=None, tick_microsecond=None,
+    kw_label=dict(rotation=60, horizontalalignment='left'),
+    kw_tick=dict(color='k', labelcolor='k', direction='out', length=4)
+):
+    '''
+    xdata : tested for pandas.to_datetime() or astropy.Time.plot_date
+    Uses autolocator simple method.
+    '''
+    locator = mdates.AutoDateLocator()
+
+    for inter, i in zip([tick_year, tick_month, tick_day, tick_hour,
+                         tick_minute, tick_second, tick_microsecond],
+                        [YEARLY, MONTHLY, DAILY, HOURLY, MINUTELY, SECONDLY,
+                         7]):
+        if inter is not None:
+            locator.intervald[i] = np.atleast_1d(inter)
+
+    if concise:
+        formatter = mdates.ConciseDateFormatter(locator)
+    else:
+        formatter = mdates.AutoDateFormatter(locator)
+
+    ax_list = list(np.atleast_1d(ax_list).flatten())
+    ax2_list = []
+    for ax in ax_list:
+        ax2 = ax.twiny()
+        ax2.plot(xdata, ydata, '')  # Fake plot
+        ax2.xaxis.set_major_locator(locator)
+        ax2.xaxis.set_major_formatter(formatter)
+        for label in ax2.get_xticklabels():
+            for k, v in kw_label.items():
+                eval(f"label.set_{k}")(v)
+        ax2_list.append(ax2)
+    return ax2_list
+
+    # def _locator_parse(locs):
+    #     locs = np.atleast_1d(locs)
+    #     news = []
+    #     for loc in locs:
+    #         if isinstance(loc, str):
+    #             loc = loc.lower()
+    #             if loc.startswith("ye"):
+    #                 news.append(mdates.YearLocator)
+    #             elif loc.startswith("mo"):
+    #                 news.append(mdates.MonthLocator)
+    #             elif loc.startswith("da"):
+    #                 news.append(mdates.DayLocator)
+    #             elif loc.startswith("ho") or loc.startswith("hr"):
+    #                 news.append(mdates.HourLocator)
+    #             elif loc.startswith("mi"):
+    #                 news.append(mdates.MinuteLocator)
+    #             elif loc.startswith("se"):
+    #                 news.append(mdates.SecondLocator)
+    #             elif loc.startswith("we"):
+    #                 news.append(mdates.WeekdayLocator)
+    #             # AudoDateLocator, MicrosecondLocator are ignored
+    #             else:
+    #                 raise ValueError("locator loc not understood")
+    #         else:
+    #             return news.append(loc)
+
+    # xmajlocators = _locator_parse(xmajlocators)
+    # xminlocators = _locator_parse(xminlocators)
+    # if concise_date:
+    #     xmajformatters=mdates.ConciseDateFormatter
