@@ -15,7 +15,7 @@ __all__ = ["colorbaring", "mplticker", "ax_tick",
 def colorbaring(fig, ax, im, fmt="%.0f", orientation='horizontal',
                 formatter=FormatStrFormatter, **kwargs):
     cb = fig.colorbar(im, ax=ax, orientation=orientation,
-                      format=FormatStrFormatter(fmt), **kwargs)
+                      format=formatter(fmt), **kwargs)
 
     return cb
 
@@ -379,7 +379,8 @@ def logyticker(ax_list,
 
 
 def append_xdate(
-    ax_list, xdata, ydata, concise=False,
+    ax_list, xdata, ydata, concise=False, defaultfmt="%Y-%m-%d",
+    kw_loc={},
     tick_year=None, tick_month=None, tick_day=None,
     tick_hour=None, tick_minute=None, tick_second=None, tick_microsecond=None,
     kw_label=dict(rotation=60, horizontalalignment='left'),
@@ -388,6 +389,8 @@ def append_xdate(
     '''
     xdata : tested for pandas.to_datetime() or astropy.Time.plot_date
     Uses autolocator simple method.
+    I dunno why defaultfmt does not work as expected. matplotlib is too
+    crazily complicated.
     '''
     locator = mdates.AutoDateLocator()
 
@@ -399,9 +402,10 @@ def append_xdate(
             locator.intervald[i] = np.atleast_1d(inter)
 
     if concise:
-        formatter = mdates.ConciseDateFormatter(locator)
+        formatter = mdates.ConciseDateFormatter(locator, **kw_loc)
     else:
-        formatter = mdates.AutoDateFormatter(locator)
+        formatter = mdates.AutoDateFormatter(locator, defaultfmt=defaultfmt,
+                                             **kw_loc)
 
     ax_list = list(np.atleast_1d(ax_list).flatten())
     ax2_list = []
