@@ -6,8 +6,9 @@ from dateutil.rrule import (DAILY, HOURLY, MINUTELY, MONTHLY, SECONDLY,
                             YEARLY)
 from matplotlib.ticker import (FormatStrFormatter, LogFormatterSciNotation,
                                LogLocator, MultipleLocator, NullFormatter)
+from astropy.stats import sigma_clipped_stats
 
-__all__ = ["colorbaring", "mplticker", "ax_tick",
+__all__ = ["colorbaring", "vrange_sigc", "mplticker", "ax_tick",
            "linticker", "logticker", "logxticker", "logyticker",
            "linearticker", "append_xdate"]
 
@@ -18,6 +19,22 @@ def colorbaring(fig, ax, im, fmt="%.0f", orientation='horizontal',
                       format=formatter(fmt), **kwargs)
 
     return cb
+
+
+def vrange_sigc(data, factors=3, mask=None, mask_value=None, sigma=3.0, sigma_lower=None,
+                sigma_upper=None, maxiters=5, cenfunc='median', stdfunc='std', std_ddof=0,
+                axis=None, grow=False, as_dict=True):
+    _, med, std = sigma_clipped_stats(data, mask=mask, mask_value=mask_value, sigma=sigma,
+                                      sigma_lower=sigma_lower, sigma_upper=sigma_upper,
+                                      maxiters=maxiters, cenfunc=cenfunc, stdfunc=stdfunc,
+                                      std_ddof=std_ddof, axis=axis, grow=grow)
+    factors = np.atleast_1d(factors)
+    if factors.size == 1:
+        factors = np.repeat(factors, 2)
+    if as_dict:
+        return dict(vmin=med - factors[0]*std, vmax=med + factors[1]*std)
+    return (med - factors[0]*std, med + factors[1]*std)
+
 
 
 def ax_tick(ax, x_vals=None, x_show=None, y_vals=None, y_show=None):
