@@ -1,6 +1,6 @@
 import numpy as np
 
-__all__ = ["hist"]
+__all__ = ["hist", "hist2"]
 
 
 def hist(data, bins, range=None, normed=None, weights=None, density=None):
